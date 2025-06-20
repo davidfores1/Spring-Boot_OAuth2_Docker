@@ -43,7 +43,7 @@ import reactor.netty.http.client.HttpClient;
  * @author sotobotero
  */
 @RestController
-@RequestMapping("/customer")
+@RequestMapping("/customer/v1")
 public class CustomerRestController {
     
     @Autowired
