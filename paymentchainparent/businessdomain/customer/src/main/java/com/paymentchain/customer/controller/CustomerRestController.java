@@ -45,19 +45,18 @@ import reactor.netty.http.client.HttpClient;
 @RestController
 @RequestMapping("/customer/v1")
 public class CustomerRestController {
-    
+
     @Autowired
     CustomerRepository customerRepository;
-    
+
     @Autowired
     private WebClient.Builder webClientBuilder;
-    
+
 //    private final WebClient.Builder webClientBuilder;
 //
 //    public CustomerRestController(WebClient.Builder webClientBuilder) {
 //        this.webClientBuilder = webClientBuilder;
 //    }
-
     HttpClient client = HttpClient.create()
             .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 5000)
             .option(ChannelOption.SO_KEEPALIVE, true)
@@ -68,63 +67,66 @@ public class CustomerRestController {
                 connection.addHandlerLast(new ReadTimeoutHandler(5000, TimeUnit.MILLISECONDS));
                 connection.addHandlerLast(new WriteTimeoutHandler(5000, TimeUnit.MILLISECONDS));
             });
-    
 
     @Value("${custom.activeprofileName:local}")
     private String profile;
-    
+
     @GetMapping("check")
-    public String check(){
-    return "Hello your profile value is: "+ profile;
+    public String check() {
+        return "Hello your profile value is: " + profile;
     }
-    
-    
+
     @GetMapping()
-    public List<Customer> list() {
-        return customerRepository.findAll();
+    public ResponseEntity<?> list() {
+        List<Customer> findAll = customerRepository.findAll();
+
+        if (findAll.isEmpty()) {
+            return ResponseEntity.noContent().build();
+        } else {
+            return ResponseEntity.ok(findAll);
+        }
     }
-    
+
     @GetMapping("/{id}")
-    public ResponseEntity<?> get(@PathVariable ("id") long id) {
-         Optional<Customer> customer = customerRepository.findById(id);
+    public ResponseEntity<?> get(@PathVariable("id") long id) {
+        Optional<Customer> customer = customerRepository.findById(id);
         if (customer.isPresent()) {
             return new ResponseEntity<>(customer.get(), HttpStatus.OK);
         } else {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
     }
-    
+
     @PutMapping("/{id}")
-    public ResponseEntity<?> put(@PathVariable ("id") long id, @RequestBody Customer input) {
-         Optional<Customer> optionalcustomer = customerRepository.findById(id);
+    public ResponseEntity<?> put(@PathVariable("id") long id, @RequestBody Customer input) {
+        Optional<Customer> optionalcustomer = customerRepository.findById(id);
         if (optionalcustomer.isPresent()) {
             Customer newcustomer = optionalcustomer.get();
             newcustomer.setName(input.getName());
             newcustomer.setPhone(input.getPhone());
-             Customer save = customerRepository.save(newcustomer);
-          return new ResponseEntity<>(save, HttpStatus.OK);
+            Customer save = customerRepository.save(newcustomer);
+            return new ResponseEntity<>(save, HttpStatus.OK);
         } else {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
     }
-    
+
     @PostMapping
     public ResponseEntity<?> post(@RequestBody Customer input) {
         input.getProducts().forEach(x -> x.setCustomer(input));
         Customer save = customerRepository.save(input);
         return ResponseEntity.ok(save);
     }
-    
+
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> delete(@PathVariable ("id") long id) {
+    public ResponseEntity<?> delete(@PathVariable("id") long id) {
         Optional<Customer> findById = customerRepository.findById(id);
-        if(findById != null ){
-         customerRepository.deleteById(id);
+        if (findById != null) {
+            customerRepository.deleteById(id);
         }
-         return new ResponseEntity<>(HttpStatus.OK);
+        return new ResponseEntity<>(HttpStatus.OK);
     }
-    
-        
+
     @GetMapping("/full/{code}")
     public Customer getByCode(@RequestParam("code") String code) {
 
@@ -140,20 +142,20 @@ public class CustomerRestController {
 
         return customer;
     }
-    
-        private String getProductName(long id) {
+
+    private String getProductName(long id) {
         WebClient build = webClientBuilder.clientConnector(new ReactorClientHttpConnector(client))
                 .baseUrl("http://BUSINESSDOMAIN-PRODUCT/product")
                 .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                 .build();
-        
+
         JsonNode block = build.method(HttpMethod.GET).uri("/" + id)
                 .retrieve().bodyToMono(JsonNode.class).block();
 
         String name = block.get("name").asText();
         return name;
     }
- 
+
     private List<?> getTransactions(String iban) {
         WebClient build = webClientBuilder.clientConnector(new ReactorClientHttpConnector(client))
                 .baseUrl("http://BUSINESSDOMAIN-TRANSACTIONS/transaction")
@@ -172,5 +174,5 @@ public class CustomerRestController {
 
         return transactionsOptional.orElse(Collections.emptyList());
     }
-        
+
 }
