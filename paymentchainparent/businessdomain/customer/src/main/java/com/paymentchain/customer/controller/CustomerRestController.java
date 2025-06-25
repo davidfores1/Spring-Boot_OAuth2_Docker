@@ -115,7 +115,7 @@ public class CustomerRestController {
     public ResponseEntity<?> post(@RequestBody Customer input) {
         input.getProducts().forEach(x -> x.setCustomer(input));
         Customer save = customerRepository.save(input);
-        return ResponseEntity.ok(save);
+        return ResponseEntity.status(HttpStatus.CREATED).body(save);
     }
 
     @DeleteMapping("/{id}")
